@@ -24,6 +24,7 @@ sim_img = Image.new(mode="L", size=img.size, color=255 )
 pixels_per_mm = 6  # a scaling factor
 target_canvas_density = 0.4 # defines how much of image should be "black/dotted"
 min_dot_dist = 2 # mm
+clearance_dots = 0.5 # mm
 canvas_x_max = img.width / pixels_per_mm
 canvas_y_max = img.height / pixels_per_mm
 points_per_iteration = 1000
@@ -34,17 +35,26 @@ min_sat_threshold = 0.02
 pen_sizes =     ( 0.3,        0.5,        0.7,       0.1 )
 pen_threshold = ( (0.0, 0.3), (0.3, 0.5), (0.5, 0.8), (0.8, 1.0) )
 
+# a list that will contain our dots
+dots_list = []
+
 def pick_pen_size( saturation = 0 ):
     # FIXME could be optimized but does it really need to?
-    #for idx in pen_sizes.size:
-        #if saturation > pen_threshold[idx][0] and saturation <= pen_threshold[idx][1]: return pen_sizes[idx] 
+    
+    if saturation == 0:
+        print("error: pen size pick requested for 0 saturation area")
+        return pen_sizes[0]
 
-    if saturation > pen_threshold[0][0] and saturation <= pen_threshold[0][1]: return pen_sizes[0] 
-    if saturation > pen_threshold[1][0] and saturation <= pen_threshold[1][1]: return pen_sizes[1] 
-    if saturation > pen_threshold[2][0] and saturation <= pen_threshold[2][1]: return pen_sizes[2] 
-    if saturation > pen_threshold[3][0] and saturation <= pen_threshold[3][1]: return pen_sizes[3] 
+    for idx in range(len(pen_sizes)):
+        if saturation > pen_threshold[idx][0] and saturation <= pen_threshold[idx][1]: return pen_sizes[idx] 
+
     print("pen size pick failed!")
     return pen_sizes[0] # fail mode
+
+def add_dot( pos = (0,0), size = 0.5 ):
+    # adds dot to the dots_list
+    # I feel like we gotta do some checks or stuff here
+    dots_list.append( (pos,size) )
 
 def sim_dot( pos = (0,0), size = 0.5 ):
     # puts a simulated dot on the sim_img, note: all values are in mm
@@ -94,7 +104,7 @@ def check_already_dotted( pos = (0,0), size = 0.3 ):
     # calculate pixel position of dot
     center_pix_x = pos[0] * pixels_per_mm
     center_pix_y = pos[1] * pixels_per_mm
-    p_radius = size/2 * pixels_per_mm
+    p_radius = (size/2 + clearance_dots) * pixels_per_mm
 
     # do a loop around center pix and color the radius
     for px in range( int(center_pix_x - p_radius), int(center_pix_x + p_radius) ):
@@ -104,9 +114,14 @@ def check_already_dotted( pos = (0,0), size = 0.3 ):
             if( sim_img.getpixel( (px,py) ) < 255) : return True
     return False
 
+def create_nc():
+    # creates g-code from dots_list
+    # FIXME
+    return False
     
 
 def rand_pixel_collapse( pix = (0,0), threshold = 300/255 ):
+    # DEPRECATED - OBSOLETE
     cur_pixel_val = px[ pix[0], pix[1] ]
     new_pixel_val = 0 if cur_pixel_val > random.randrange(threshold*255) else 255
     sim_img.putpixel( (ix,iy), new_pixel_val )
@@ -120,7 +135,7 @@ def rand_pixel_collapse( pix = (0,0), threshold = 300/255 ):
 # some little info dump
 print(f"canvas size: {canvas_x_max}x{canvas_y_max}")
 
-# les do 500 random points
+# les do some monte carlo dot placements
 marked_points = 0
 for iteration in range(max_iterations):
     for point_num in range(points_per_iteration):
@@ -128,12 +143,15 @@ for iteration in range(max_iterations):
         ty = random.random() * canvas_y_max
         #print(f"doin a random point at: {tx},{ty})")
         sat = get_area_saturation((tx,ty), saturation_check_dia)
-        pen_size = pick_pen_size(sat)
-        if check_already_dotted( (tx,ty), pen_size ): continue
         if sat > min_sat_threshold:
+            pen_size = pick_pen_size(sat)
+            if check_already_dotted( (tx,ty), pen_size ): continue
             sim_dot( (tx,ty), pen_size )
+            add_dot( (tx,ty), pen_size )
             marked_points += 1
-    print(f"iteration: {iteration} points marked: {marked_points}/{points_per_iteration*iteration}")
+    print(f"iteration: {iteration} points marked: {marked_points}/{points_per_iteration*(iteration+1)}")
+
+create_nc()
 
 # do visual debugging
 img.show()
