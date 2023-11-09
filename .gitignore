@@ -2,3 +2,14 @@
 latest_sim_image
 latest_sim_img
 latest_sim_image.jpg
+
+# testing version of application
+app
+
+# object files
+obj/
+*.o
+*.obj
+
+# vim swap files
+*.swp

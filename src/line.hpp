@@ -1,32 +1,38 @@
 #pragma once
+#include <iostream>
+#include <vector>
+
+template <typename typ>
+bool vectorContains( typ& , std::vector<typ>& );
 
 class Point
 {
   public:
     Point( int, int );
     Point();
-    bool operator==( Point& );
+    bool operator==( const Point& );
+
+    int dist_to( const Point& );
+
     int m_x;
     int m_y;
-
-    int dist_to( Point );
 };
 
-class Line{
+class Line
+{
   public:
-    int m_start_x;
-    int m_start_y;
-
-    int m_end_x;
-    int m_end_y;
-
+    Line( Point, Point );
     Line( int, int, int, int );
+
+    Point m_start;
+    Point m_end;
 };
 
 class Mesh
 {
   public:
     Mesh( Point, Point, Point );
+    Mesh();
 
     Point m_p1;
     Point m_p2;
@@ -34,4 +40,3 @@ class Mesh
 };
 
 int line_test();
-void test();
