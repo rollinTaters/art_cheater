@@ -1,7 +1,7 @@
 #include "line.hpp"
-#include "SFML/Graphics.hpp"
 #include <cstdlib>  // for rand()
 #include <cmath>    // for sqrt()
+#include <list>
 
 /*
    -pick random points
@@ -14,12 +14,10 @@
    */
 
 // ======== Global scoped Storage ========
-std::vector<Point> v_points;
-std::vector<Line> v_lines;
 std::vector<Mesh> v_meshes;
 
 // ======== POINT ========
-Point::Point( int x, int y ):
+Point::Point( float x, float y ):
     m_x(x), m_y(y)
 {   }
 Point::Point():
@@ -31,15 +29,15 @@ bool Point::operator==( const Point& other ) const
     return ( m_x == other.m_x && m_y == other.m_y );
 }
 
-int Point::getX() const
+float Point::getX() const
 { return m_x; }
 
-int Point::getY() const
+float Point::getY() const
 { return m_y; }
 
-int Point::dist_to( const Point& p_other ) const
+float Point::dist_to( const Point& p_other ) const
 {   // returns the distance between this and given point
-    return (int)std::sqrt( std::pow(m_x - p_other.m_x, 2) + std::pow(m_y - p_other.m_y, 2) );
+    return std::sqrt( std::pow(m_x - p_other.m_x, 2) + std::pow(m_y - p_other.m_y, 2) );
 }
 
 
@@ -58,7 +56,7 @@ bool Line::operator==( const Line& other ) const
     return ( m_start == other.m_start && m_end == other.m_end );
 }
 
-int Line::getLen() const
+float Line::getLen() const
 { // returns lenght of line
     return m_end.dist_to(m_start);
 }
@@ -99,7 +97,7 @@ float Mesh::getArea() const
 }
 
 bool Mesh::generateInfill( const float target_density )
-{
+{ // target_density is lines per 10mm
     // dont regenerate the infill (at least for now)
     if( !infill.empty() ) return false;
 
@@ -107,20 +105,11 @@ bool Mesh::generateInfill( const float target_density )
     Point focus = m_p1;
     Line edge = Line( m_p2, m_p3 );
 
-    /*
-    float area = getArea() / 1.2e6; // scaled by a made up number
-    if( area == 0 ) return true; // if for some cruel chance we get 3 points in a line (it happened a couple of times)
-    float mid_point_dist = focus.dist_to( interpolate( 0.5f, edge ) );
-    float area_per_dist = area/mid_point_dist;  // average spread angle of boundary lines
-
-    float tick = area_per_dist / target_density * 100.f;
-    std::cout<< "tick: "<<tick<<"\n";
-    */
-
     // DEBUG
     //std::cout<<"\narea: "<<area<<" ratio: "<<area/density<<"\n";
 
-    float tick = 1 - target_density;
+    float tick = (1 - target_density)*100.f /edge.getLen();
+    //std::cout<< "tick: "<<tick<<"\n";
 
     for( float ratio = tick; ratio < 1.0f; ratio += tick )
     {
@@ -156,29 +145,50 @@ std::ostream& operator<<( std::ostream& os, const Mesh& m )
 
 bool find_nearest_mesh_points(
         const Point focus_point,
-        const std::vector<Point>& i_points,
-        std::vector<Point>& i_excluded_points,
+        std::list<Point>& i_all_points,
+        std::list<Point>& i_focus_points,
+        std::list<Point>& i_vertex_points,
         Point* output )
 {
+    output[0] = Point(0,0);
+    output[1] = Point(0,0);
+    output[2] = Point(0,0);
 
     // pick 3 points for mesh corners
     for( int mesh_corner_ind = 0; mesh_corner_ind < 3; mesh_corner_ind++ )
     {
         int distance = RAND_MAX;    // #TODO change the value later when adjusting sizes
-        // for all points in i_points, find nearest
-        for( size_t i = 0; i < i_points.size(); i++ )
+        // for all points in i_all_points, find nearest
+        for( Point all_p : i_all_points )
         {
             // dont compare it with itself
-            if( focus_point == i_points[i] ) continue;
+            if( focus_point == all_p) continue;
 
-            // dont compare with excluded points
-            if( vectorContains( i_points[i], i_excluded_points ) ) continue;
+            // also dont compare with previous picked points
+            if( all_p == output[0] ||
+                all_p == output[1] ||
+                all_p == output[2] ) continue;
             
             // check the distance
-            if( focus_point.dist_to( i_points[i] ) < distance )
+            if( focus_point.dist_to( all_p ) < distance )
             {
-                distance = focus_point.dist_to( i_points[i] );
-                output[mesh_corner_ind] = i_points[i];
+                distance = focus_point.dist_to( all_p );
+                output[mesh_corner_ind] = all_p;
+            }
+        }
+        // do the same shit for vertex points
+        for( Point vertex_p : i_vertex_points )
+        {
+            // dont compare with previous picked points
+            if( vertex_p == output[0] ||
+                vertex_p == output[1] ||
+                vertex_p == output[2] ) continue;
+            
+            // check the distance
+            if( focus_point.dist_to( vertex_p ) < distance )
+            {
+                distance = focus_point.dist_to( vertex_p );
+                output[mesh_corner_ind] = vertex_p;
             }
         }
 
@@ -189,13 +199,16 @@ bool find_nearest_mesh_points(
             output[1] = Point(0,0);
             output[2] = Point(0,0);
             return false;
-        }
-        else{
-            // add the picked point to the excluded points
-            i_excluded_points.push_back( output[mesh_corner_ind] );
+        }else{
+            // move the picked point to the vertex points
+            i_all_points.remove( output[mesh_corner_ind] );
+            i_vertex_points.push_back( output[mesh_corner_ind] );
+            // TODO: we may add duplicates of points, wasted cpu cycles here...
         }
     }
-    i_excluded_points.push_back( focus_point );
+    // move the focus point from all points to focus points list
+    i_all_points.remove( focus_point );
+    i_focus_points.push_back( focus_point );
     return true;
 }
 
@@ -222,29 +235,29 @@ Point interpolate( const float ratio, const Line l )
     return interpolate( ratio, l.getStart(), l.getEnd() );
 }
 
-int line_test()
+void create_line_artwork( float wa_x, float wa_y )
 {
-    //int lel = std::rand();
-
     std::cout<< "line_test function called\n";
+    float work_area_x = wa_x;
+    float work_area_y = wa_y;
 
-    // create 170 random points
-    for( int i=0; i<170; i++ )
-    {
-        v_points.emplace_back( std::rand()%5000, std::rand()%5000 );
-    }
-
-
-    // a helper vector for keeping track of center("focus") points
-    std::vector<Point> excluded_points;
+    // containers for points
+    std::list<Point> all_points;
+    std::list<Point> focus_points;
+    std::list<Point> vertex_points;
     Point poynts[3];
 
-    // start creating meshes
-    for( size_t fpi = 0; fpi < v_points.size(); fpi++ )
-    { // focus point index
+    // create some random points
+    for( int i=0; i<400; i++ )
+    {
+        all_points.emplace_back( std::rand()%(int)work_area_x, std::rand()%(int)work_area_y );
+    }
 
+    // start creating meshes
+    while( !all_points.empty() )
+    { // focus point index
         // find nearest 3 points
-        if( !find_nearest_mesh_points( v_points[fpi], v_points, excluded_points, poynts ) ) break;
+        if( !find_nearest_mesh_points( all_points.front(), all_points, focus_points, vertex_points, poynts ) ) break;
 
         // create meshes from those points
         v_meshes.emplace_back( poynts[0], poynts[1], poynts[2] );
@@ -255,23 +268,25 @@ int line_test()
     for( size_t mi = 0; mi < v_meshes.size(); mi++ )
     { // mesh index
         v_meshes[mi].generateInfill( 0.89f );
-        std::cout<< "Mesh " << mi << " generated " << v_meshes[mi].infill.size() << " infill lines\n";
-        std::cout<< v_meshes[mi] <<"\n";
+
+        // DEBUG: print infill count
+        //std::cout<< "Mesh " << mi << " generated " << v_meshes[mi].infill.size() << " infill lines\n";
+        // DEBUG: print mesh info
+        //std::cout<< v_meshes[mi] <<"\n";
     }
 
-    //print_gcode();
-
-    return 0; // default successfull exit code
 }
 
 void print_gcode()
 {   // prints gcode to stream
 
+    float z_clearance_level = 3.f;
+
     std::cout<<"G21 ;metric values\n"
              <<"G90 ;absolute positioning\n"
-             <<"G28 X0 Y0 ;movei/set to xy zero\n"
+             <<"G28 X0 Y0 ;move/set to xy zero\n"
              <<"G28 Z0 ; move/set to Z zero\n"
-             <<"G01 Z3 F400 ;move 3mm up\n";
+             <<"G01 Z"<<z_clearance_level<<" F400 ;move clearance amount up\n";
 
     for( size_t m_ind = 0; m_ind < v_meshes.size(); m_ind++ )
     { // for each mesh, m_ind
@@ -283,11 +298,52 @@ void print_gcode()
                      <<"G01 X"<<l.getEnd().getX()<<" Y"<<l.getEnd().getY()<<"\n"
                      <<"G01 Z0\n"
                      <<"G01 X"<<l.getStart().getX()<<" Y"<<l.getStart().getY()<<"\n"
-                     <<"G00 Z3\n";
+                     <<"G00 Z"<<z_clearance_level<<"\n";
         }
     }
 }
 
+void dLine( sf::Image& im, const Line& l, const float thickness, float ppmm )
+{   // draws the line on the image using CPU
+    Point p1 = l.getStart();
+    Point p2 = l.getEnd();
+    int im_h = im.getSize().x;
+    int im_w = im.getSize().y;
+    float x1 = p1.getX()*ppmm;
+    float x2 = p2.getX()*ppmm;
+    float y1 = p1.getY()*ppmm;
+    float y2 = p2.getY()*ppmm;
+    float l_len = l.getLen()*ppmm;
+    int border = 0.4*ppmm;
 
+    for( int x = std::min(x1, x2)-border; x < std::max(x1, x2)+border; x++ )
+    {   // line x span + border
+        for( int y = std::min(y1, y2)-border; y < std::max(y1, y2)+border; y++ )
+        {   // line y span + border
+            if( x < 0 || y < 0 || x > im_w || y > im_h ) continue;
+            if( std::abs( (x2-x1) * (y1-y) - (x1-x) * (y2-y1) ) / l_len < (thickness*ppmm/2.f) )
+                im.setPixel(x, y, sf::Color::Black );
+        }
+    }
+}
+
+void draw_to_image( sf::Image& im, float ppmm )
+{
+    for( Mesh m : v_meshes )
+    {
+        // mesh bounds
+        dLine( im, Line(m.m_p1, m.m_p2), 0.7f, ppmm );
+        dLine( im, Line(m.m_p2, m.m_p3), 0.7f, ppmm );
+        dLine( im, Line(m.m_p3, m.m_p1), 0.7f, ppmm );
+
+        /*
+        // infill lines
+        for( Line l: m.infill )
+        {
+            dLine( im, l, 0.5f, ppmm );
+        }
+        */
+    }
+}
 
 

@@ -1,4 +1,5 @@
 #pragma once
+#include "SFML/Graphics/Image.hpp"
 #include <iostream>
 #include <vector>
 
@@ -8,17 +9,17 @@ bool vectorContains( const typ&, const std::vector<typ>& );
 class Point
 {
   public:
-    Point( int, int );
+    Point( float, float );
     Point();
     bool operator==( const Point& ) const;
 
-    int getX() const;
-    int getY() const;
-    int dist_to( const Point& ) const;
+    float getX() const;
+    float getY() const;
+    float dist_to( const Point& ) const;
 
   private:
-    int m_x;
-    int m_y;
+    float m_x;
+    float m_y;
 };
 
 class Line
@@ -28,7 +29,7 @@ class Line
     Line( int, int, int, int );
     bool operator==( const Line& ) const;
 
-    int getLen() const;
+    float getLen() const;
     Point getStart() const;
     Point getEnd() const;
 
@@ -55,5 +56,6 @@ class Mesh
 Point interpolate( const float, const Point, const Point );
 Point interpolate( const float, const Line );
 
-int line_test();
+void create_line_artwork( float, float );
 void print_gcode();
+void draw_to_image( sf::Image&, float );
