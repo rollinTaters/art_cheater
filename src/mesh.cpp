@@ -137,7 +137,7 @@ bool Mesh::generateInfill( const float target_density )
     return true;
 }
 
-void Mesh::move( const float x, const float y )
+Mesh& Mesh::move( const float x, const float y )
 {
     m_p1 = m_p1 + Point(x,y);
     m_p2 = m_p2 + Point(x,y);
@@ -146,12 +146,14 @@ void Mesh::move( const float x, const float y )
     {
         l.move(x,y);
     }
+    return *this;
 }
 
 bool Mesh::contains( const Point p ) const
 {
-    // TODO
-    return false;
+    return ( Line(m_p1,m_p2).onSameSide(m_p3, p) &&
+             Line(m_p2,m_p3).onSameSide(m_p1, p) &&
+             Line(m_p3,m_p1).onSameSide(m_p2, p) );
 }
 
 std::vector<Point> Mesh::getPoints() const

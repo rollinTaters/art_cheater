@@ -9,11 +9,12 @@ class Point
     bool operator==( const Point& ) const;
     bool operator!=( const Point& ) const;
     Point operator+( const Point& ) const;
+    Point operator-( const Point& ) const;
 
     float getX() const;
     float getY() const;
     float dist_to( const Point& ) const;
-    void move( const float, const float );
+    Point& move( const float, const float );
 
   private:
     float m_x;

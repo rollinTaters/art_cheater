@@ -24,6 +24,11 @@ Point Point::operator+( const Point& other ) const
     return Point( m_x + other.getX(), m_y + other.getY() );
 }
 
+Point Point::operator-( const Point& other ) const
+{
+    return Point( m_x - other.getX(), m_y - other.getY() );
+}
+
 float Point::getX() const
 { return m_x; }
 
@@ -35,10 +40,11 @@ float Point::dist_to( const Point& p_other ) const
     return std::sqrt( std::pow(m_x - p_other.m_x, 2) + std::pow(m_y - p_other.m_y, 2) );
 }
 
-void Point::move( const float x, const float y )
+Point& Point::move( const float x, const float y )
 {
     m_x += x;
     m_y += y;
+    return *this;
 }
 
 // ==== Standalone Functions ====

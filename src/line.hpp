@@ -13,7 +13,9 @@ class Line
     float getLen() const;
     Point getStart() const;
     Point getEnd() const;
-    void move( const float, const float );
+    Line& move( const float, const float );
+    bool onOneSide( const Point ) const;
+    bool onSameSide( const Point, const Point ) const;
 
   private:
     Point m_start;

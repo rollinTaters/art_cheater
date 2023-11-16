@@ -27,11 +27,30 @@ Point Line::getStart() const
 Point Line::getEnd() const
 { return m_end; }
 
-void Line::move( const float x, const float y )
+Line& Line::move( const float x, const float y )
 {
     m_start.move(x,y);
     m_end.move(x,y);
+    return *this;
 }
+
+bool Line::onOneSide( const Point p ) const
+{
+    // dont ask..
+    float x2 = m_end.getX();
+    float x1 = m_start.getX();
+    float y2 = m_end.getY();
+    float y1 = m_start.getY();
+    float x = p.getX();
+    float y = p.getY();
+    return ((x2-x1) * (y1-y) - (x1-x) * (y2-y1)) < 0;
+}
+
+bool Line::onSameSide( const Point p1, const Point p2 ) const
+{
+    return !(onOneSide(p1) != onOneSide(p2));
+}
+
 
 
 // ==== Printing stuff ====

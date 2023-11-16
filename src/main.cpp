@@ -7,8 +7,8 @@
 
 // Global scoped program variables, also gets used in other modules
 int pixels_per_mm = 10;
-float work_area_x = 370;
-float work_area_y = 370;
+float work_area_x = 400;
+float work_area_y = 400;
 float image_border = 30;
 
 
@@ -26,7 +26,7 @@ int main()
 
     // create the "masterpiece"
     //create_line_artwork( 1000 );
-    create_line_artwork_v2( 1000, 30 );
+    create_line_artwork_v2( 500, 40 );
     draw_to_image( sim_img );
     //print_gcode();
 

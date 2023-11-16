@@ -5,7 +5,6 @@ SFML_libs := -lsfml-audio -lsfml-graphics -lsfml-window -lsfml-system -lsfml-net
 #SFML_libs_static := -DSFML_STATIC -MMD -MP -static-libstdc++ -static-libgcc -lsfml-main -lsfml-audio-s -lsfml-graphics-s -lsfml-window-s -lsfml-system-s -lsfml-network-s  -lopengl32 -lfreetype -lwinmm -lgdi32 -lopenal32 -lFLAC -lvorbisenc -lvorbis -logg -lws2_32
 
 OBJECTS := main.o line.o point.o mesh.o line_work.o
-#SOURCES := src/main.cpp 
 
 LINUX_RELEASE_OBJECTS = $(addprefix obj/linux_, $(OBJECTS))
 LINUX_DEBUG_O3_OBJECTS = $(addprefix obj/debug_o3_, $(OBJECTS))

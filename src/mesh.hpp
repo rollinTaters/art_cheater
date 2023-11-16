@@ -20,7 +20,7 @@ class Mesh
 
     float getArea() const;
     bool generateInfill( const float );
-    void move( const float, const float );
+    Mesh& move( const float, const float );
     bool contains( const Point ) const;
     std::vector<Point> getPoints() const;
 

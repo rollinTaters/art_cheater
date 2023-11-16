@@ -84,6 +84,7 @@ void create_line_artwork_v2( int target_num_meshes, float point_search_radius )
     // - if not found, generate them
     // - add newly created mesh into list
 
+    int retry_count = 0;
 
     for( int ind = 0; ind < target_num_meshes; ind++ )
     {
@@ -95,9 +96,10 @@ void create_line_artwork_v2( int target_num_meshes, float point_search_radius )
         bool request_redo = false;
 
         for( int p_ind = 0; p_ind < 3; p_ind++ )
-        { // for each corner point
-            for( Mesh m : v_meshes )
-            {
+        { // mesh corner point creation/selection
+            for( size_t mesh_loop_ind = 0; mesh_loop_ind < v_meshes.size() && !points_ready; mesh_loop_ind++ )
+            { // mesh corner reuse & mesh intersection check
+                Mesh m = v_meshes[mesh_loop_ind];
                 // check if mesh inner point is already inside a mesh
                 if( m.contains( mip ) )
                 {   // re do this mesh
@@ -115,6 +117,8 @@ void create_line_artwork_v2( int target_num_meshes, float point_search_radius )
                     {
                         corner[p_ind] = mcp;
                         points_taken++; // makes sure we grab max 2 points from a single mesh
+                        if(p_ind < 3) p_ind++; // dont override if we have a point selected at p_ind
+                        if(p_ind >= 2){ points_ready = true; break; }  // dont overflow corner[]
                     }
                 }
             }
@@ -122,21 +126,42 @@ void create_line_artwork_v2( int target_num_meshes, float point_search_radius )
             if( request_redo ) break; // if we fucked up along the way and need to restart this mesh
 
             // if a suitable corner has not been found yet, create a new one
-            corner[p_ind] = mip + Point( rand()%(int)(point_search_radius), rand()%(int)(point_search_radius) );
+            corner[p_ind] = mip +
+                            Point( rand()%(int)(point_search_radius),
+                                   rand()%(int)(point_search_radius) ) -
+                            Point( point_search_radius/2.f,
+                                   point_search_radius/2.f );
             // dont let the new point wander beyond work area bounds
             corner[p_ind] = Point( std::min( corner[p_ind].getX(), work_area_x ),
                                    std::min( corner[p_ind].getY(), work_area_y ) );
-            // TODO: check if newly created point lies inside an existing mesh, if so request redo
+            corner[p_ind] = Point( std::max( corner[p_ind].getX(), 0.f ),
+                                   std::max( corner[p_ind].getY(), 0.f ) );
+
+            // check if newly created point lies inside an existing mesh, if so request redo
+            for( Mesh m : v_meshes )
+            {
+                if( m.contains( corner[p_ind] ) )
+                {
+                    request_redo = true;
+                    break;
+                }
+            }
+
+            if( request_redo ) break; // if we fucked up along the way and need to restart this mesh
 
             // finally declare all corner's points ready for mesh creation
-            if( p_ind == 2 ) points_ready = true;
+            if( p_ind >= 2 ) points_ready = true;
         }
+
+        // Verbose output
+        if( retry_count%1000 == 1 && retry_count != 1 ) std::cout<<"trying real hard...\n";
+        if( retry_count > 1e6 ) break;  // max iteration stopping hardpoint
 
         if( !points_ready )
         {
             // DEBUG:
-            std::cout<<"Point pick failed in artwork v2, retrying...\n";
-
+            //std::cout<<"Point pick failed in artwork v2, retrying...\n";
+            retry_count++;
             ind--;
             continue;
         }
@@ -146,7 +171,7 @@ void create_line_artwork_v2( int target_num_meshes, float point_search_radius )
         v_meshes.back().generateInfill(0.98f);
 
     }
-    std::cout<<" = Line artwork (v2) created with " << v_meshes.size() << " meshes\n";
+    std::cout<<" = Line artwork (v2) created with " << v_meshes.size() << " meshes = \ntook "<<retry_count<<" failed meshing attempts\n";
     return;
 }
 
@@ -181,25 +206,24 @@ void dLine( sf::Image& im, const Line& l, const float thickness )
     float ppmm = pixels_per_mm;
     Point p1 = l.getStart();
     Point p2 = l.getEnd();
-    int im_h = im.getSize().x;
-    int im_w = im.getSize().y;
+    int im_h = im.getSize().y;
+    int im_w = im.getSize().x;
     float x1 = p1.getX()*ppmm;
     float x2 = p2.getX()*ppmm;
     float y1 = p1.getY()*ppmm;
     float y2 = p2.getY()*ppmm;
     float l_len = l.getLen()*ppmm;
     int border = 0.4*ppmm;
-    int canvas_clearance = 0.6*ppmm;
 
-    for( int x = std::max( std::min(x1, x2)-border, canvas_clearance*ppmm );
-         x < std::min( (work_area_x - canvas_clearance)*ppmm, std::max(x1, x2)+border );
+    for( int x = std::min(x1, x2)-border ;
+         x < std::max(x1, x2)+border ;
          x++ )
-    {   // line x span + border, constrained in canvas_clearance dist away from edges
-        for( int y = std::max( std::min(y1, y2)-border, canvas_clearance*ppmm );
-             y < std::min( (work_area_y - canvas_clearance)*ppmm, std::max(y1, y2)+border );
+    {   // line x span + border
+        for( int y = std::min(y1, y2)-border ;
+             y < std::max(y1, y2)+border ;
              y++ )
         {   // line y span + border
-            if( x < 0 || y < 0 || x > im_w || y > im_h ) continue;
+            if( x < 0 || y < 0 || x >= im_w || y >= im_h ) continue;
             if( std::abs( (x2-x1) * (y1-y) - (x1-x) * (y2-y1) ) / l_len < (thickness*ppmm/2.f) )
                 im.setPixel(x, y, sf::Color::Black );
         }
@@ -208,6 +232,16 @@ void dLine( sf::Image& im, const Line& l, const float thickness )
 
 void draw_to_image( sf::Image& im )
 {
+    // frame drawing
+    Line fr1 = Line(Point(0,0), Point(work_area_x,0)).move(image_border,image_border);
+    Line fr2 = Line(Point(0,0), Point(0, work_area_y)).move(image_border,image_border);
+    Line fr3 = Line(Point(0,work_area_y), Point(work_area_x, work_area_y)).move(image_border,image_border);
+    Line fr4 = Line(Point(work_area_x,0), Point(work_area_x, work_area_y)).move(image_border,image_border);
+    dLine( im, fr1, 5.0f );
+    dLine( im, fr2, 5.0f );
+    dLine( im, fr3, 5.0f );
+    dLine( im, fr4, 5.0f );
+
     for( Mesh mesh : v_meshes )
     {
         // create a temporary mesh and move it, so that we have a border around our canvas
