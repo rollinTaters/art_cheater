@@ -1,6 +1,16 @@
+#include "point.hpp"
 #include "line.hpp"
+#include "mesh.hpp"
+#include "line_work.hpp"
 #include "SFML/Graphics/Image.hpp"
 #include <iostream>
+
+// Global scoped program variables, also gets used in other modules
+int pixels_per_mm = 10;
+float work_area_x = 370;
+float work_area_y = 370;
+float image_border = 30;
+
 
 int main()
 {
@@ -8,10 +18,6 @@ int main()
     // seed the pRNG
     srand(time(NULL));
 
-    int pixels_per_mm = 10;
-    float work_area_x = 180;
-    float work_area_y = 180;
-    float image_border = 0;
 
     sf::Image sim_img;
     sim_img.create( (work_area_x + 2*image_border)*pixels_per_mm,
@@ -19,8 +25,9 @@ int main()
                     sf::Color::White );
 
     // create the "masterpiece"
-    create_line_artwork( work_area_x, work_area_y );
-    draw_to_image( sim_img, pixels_per_mm );
+    //create_line_artwork( 1000 );
+    create_line_artwork_v2( 1000, 30 );
+    draw_to_image( sim_img );
     //print_gcode();
 
     // do stuff to image

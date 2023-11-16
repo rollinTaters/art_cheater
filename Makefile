@@ -4,8 +4,8 @@ SFML_dir_win := /home/flynn/code_dumpster/cpp_stuff/game_dev_resources/SFML-2.6.
 SFML_libs := -lsfml-audio -lsfml-graphics -lsfml-window -lsfml-system -lsfml-network
 #SFML_libs_static := -DSFML_STATIC -MMD -MP -static-libstdc++ -static-libgcc -lsfml-main -lsfml-audio-s -lsfml-graphics-s -lsfml-window-s -lsfml-system-s -lsfml-network-s  -lopengl32 -lfreetype -lwinmm -lgdi32 -lopenal32 -lFLAC -lvorbisenc -lvorbis -logg -lws2_32
 
-OBJECTS := main.o line.o
-#SOURCES := src/main.cpp src/time_manager.cpp src/room.cpp src/agents.cpp src/entities.cpp src/envManager.cpp src/AI.cpp src/graphics.cpp src/genome.cpp src/content_pack1.cpp
+OBJECTS := main.o line.o point.o mesh.o line_work.o
+#SOURCES := src/main.cpp 
 
 LINUX_RELEASE_OBJECTS = $(addprefix obj/linux_, $(OBJECTS))
 LINUX_DEBUG_O3_OBJECTS = $(addprefix obj/debug_o3_, $(OBJECTS))
@@ -24,7 +24,7 @@ WIN_LDFLAGS := -mwindows -I $(SFML_dir_win)/include -L$(SFML_dir_win)/lib -L/usr
 WIN_COMPILER := x86_64-w64-mingw32-g++-posix
 LINUX_COMPILER := g++
 
-BUILD_VER := 0.0.1
+BUILD_VER := 0.0.3
 RELEASE_PATH := release_builds/v$(BUILD_VER)
 
 .PHONY: clean release src/main.hpp
@@ -49,8 +49,8 @@ clean:
 # ==== Release commands ====
 release: $(LINUX_RELEASE_OBJECTS) $(RELEASE_PATH)
 	rm -r -f $(RELEASE_PATH) obj/linux_*.o obj/win_*.o
-	make Journey_mkII_linux
-	make Journey_mkII_win64
+	make art_cheater_linux
+	make art_cheater_win64
 	tar -C ./$(RELEASE_PATH) -acf ./$(RELEASE_PATH)/linux64_$(BUILD_VER).tar linux
 	zip -r -q ./$(RELEASE_PATH)/win64_$(BUILD_VER).zip ./$(RELEASE_PATH)/win
 
@@ -64,7 +64,7 @@ $(RELEASE_PATH)/linux: $(RELEASE_PATH)
 	mkdir $(RELEASE_PATH)/linux
 
 # ==== Linux Release build ====
-Journey_mkII_linux: $(RELEASE_PATH)/linux $(LINUX_RELEASE_OBJECTS)
+art_cheater_linux: $(RELEASE_PATH)/linux $(LINUX_RELEASE_OBJECTS)
 	cp -r $(SFML_dir_linux)/lib $(RELEASE_PATH)/linux/lib
 	cp -r gfx $(RELEASE_PATH)/linux/gfx
 	$(LINUX_COMPILER) $(RELEASE_FLAGS) $(LINUX_RELEASE_OBJECTS) -o $(RELEASE_PATH)/linux/Journey_mkII_linux $(LINUX_LDFLAGS)
@@ -73,7 +73,7 @@ $(LINUX_RELEASE_OBJECTS): obj/linux_%.o : src/%.cpp
 	$(LINUX_COMPILER) $(RELEASE_FLAGS) -c $< -o $@ $(LINUX_LDFLAGS)
 
 # ==== Windows Release build ====
-Journey_mkII_win64: $(RELEASE_PATH)/win $(WIN_RELEASE_OBJECTS)
+art_cheater_win64: $(RELEASE_PATH)/win $(WIN_RELEASE_OBJECTS)
 	cp -r $(SFML_dir_win)/lib/sfml-graphics-2.dll $(RELEASE_PATH)/win/sfml-graphics-2.dll
 	cp -r $(SFML_dir_win)/lib/sfml-system-2.dll $(RELEASE_PATH)/win/sfml-system-2.dll
 	cp -r $(SFML_dir_win)/lib/sfml-window-2.dll $(RELEASE_PATH)/win/sfml-window-2.dll
