@@ -1,5 +1,6 @@
 #pragma once
 #include <ostream>
+#define PI 3.141592
 
 class Point
 {
@@ -15,6 +16,8 @@ class Point
     float getY() const;
     float dist_to( const Point& ) const;
     Point& move( const float, const float );
+    Point& move( const Point& );
+    Point& rotate( const float );   // rotates around 0,0 angle is in radians !!!
 
   private:
     float m_x;

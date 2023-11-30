@@ -120,7 +120,6 @@ bool Mesh::generateInfill( const float target_density )
     // dont regenerate the infill (at least for now)
     if( !infill.empty() ) return false;
 
-    // FIXME: currently we are always picking m_p1 as the focus
     Point focus = m_p1;
     Line edge = Line( m_p2, m_p3 );
 

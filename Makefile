@@ -4,7 +4,7 @@ SFML_dir_win := /home/flynn/code_dumpster/cpp_stuff/game_dev_resources/SFML-2.6.
 SFML_libs := -lsfml-audio -lsfml-graphics -lsfml-window -lsfml-system -lsfml-network
 #SFML_libs_static := -DSFML_STATIC -MMD -MP -static-libstdc++ -static-libgcc -lsfml-main -lsfml-audio-s -lsfml-graphics-s -lsfml-window-s -lsfml-system-s -lsfml-network-s  -lopengl32 -lfreetype -lwinmm -lgdi32 -lopenal32 -lFLAC -lvorbisenc -lvorbis -logg -lws2_32
 
-OBJECTS := main.o line.o point.o mesh.o line_work.o
+OBJECTS := main.o line.o point.o mesh.o line_work.o simulation_image.o pattern_work.o nc_generator.o
 
 LINUX_RELEASE_OBJECTS = $(addprefix obj/linux_, $(OBJECTS))
 LINUX_DEBUG_O3_OBJECTS = $(addprefix obj/debug_o3_, $(OBJECTS))
@@ -23,7 +23,7 @@ WIN_LDFLAGS := -mwindows -I $(SFML_dir_win)/include -L$(SFML_dir_win)/lib -L/usr
 WIN_COMPILER := x86_64-w64-mingw32-g++-posix
 LINUX_COMPILER := g++
 
-BUILD_VER := 0.0.3
+BUILD_VER := 0.0.4
 RELEASE_PATH := release_builds/v$(BUILD_VER)
 
 .PHONY: clean release src/main.hpp

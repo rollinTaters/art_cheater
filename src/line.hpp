@@ -6,6 +6,7 @@
 class Line
 {
   public:
+    Line();
     Line( Point, Point );
     Line( int, int, int, int );
     bool operator==( const Line& ) const;
@@ -14,6 +15,8 @@ class Line
     Point getStart() const;
     Point getEnd() const;
     Line& move( const float, const float );
+    Line& move( const Point& );
+    Line& rotate( const float ); // rotates around 0,0 . angle is in radians !!!
     bool onOneSide( const Point ) const;
     bool onSameSide( const Point, const Point ) const;
 

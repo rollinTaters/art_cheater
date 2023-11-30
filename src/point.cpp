@@ -47,6 +47,20 @@ Point& Point::move( const float x, const float y )
     return *this;
 }
 
+Point& Point::move( const Point& p )
+{
+    return move( p.getX(), p.getY() );
+}
+
+Point& Point::rotate( const float ang )
+{
+    float new_m_x = m_x * cos(ang) - m_y * sin(ang);
+    float new_m_y = m_x * sin(ang) + m_y * cos(ang);
+    m_x = new_m_x;
+    m_y = new_m_y;
+    return *this;
+}
+
 // ==== Standalone Functions ====
 
 Point interpolate( const float ratio, const Point p1, const Point p2 )

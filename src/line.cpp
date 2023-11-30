@@ -11,6 +11,9 @@ Line::Line( Point sp, Point ep ):
     m_start(sp), m_end(ep)
 {   }
 
+Line::Line()
+{   }
+
 bool Line::operator==( const Line& other ) const
 {
     return ( m_start == other.m_start && m_end == other.m_end );
@@ -31,6 +34,18 @@ Line& Line::move( const float x, const float y )
 {
     m_start.move(x,y);
     m_end.move(x,y);
+    return *this;
+}
+
+Line& Line::move( const Point& p )
+{
+    return move( p.getX(), p.getY() );
+}
+
+Line& Line::rotate( const float ang )
+{
+    m_start.rotate(ang);
+    m_end.rotate(ang);
     return *this;
 }
 

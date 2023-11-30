@@ -3,7 +3,7 @@
 #include <list>
 #include <vector>
 #include <iostream>
-//#include <cmath>    // for sqrt()
+#include <cmath>    // for floor()
 //#include <list>
 
 /*
@@ -17,7 +17,6 @@
    */
 
 // ======== Global scoped Storage ========
-std::vector<Mesh> v_meshes; // this one is actually local for now
 extern float work_area_x;
 extern float work_area_y;
 extern float image_border;
@@ -34,8 +33,9 @@ bool vectorContains( const typ& x, const std::vector<typ>& i_vector )
 }
 
 
-void create_line_artwork( int num_points)
+std::vector<Mesh> create_line_artwork( int num_points)
 {
+    std::vector<Mesh> v_meshes;
     std::cout<< "line_test function called\n";
 
     // containers for points
@@ -71,10 +71,11 @@ void create_line_artwork( int num_points)
         // DEBUG: print mesh info
         //std::cout<< v_meshes[mi] <<"\n";
     }
+    return v_meshes;
 
 }
 
-void create_line_artwork_v2( int target_num_meshes, float point_search_radius )
+std::vector<Mesh> create_line_artwork_v2( int target_num_meshes, float point_search_radius )
 { // point search radius determines the max size of meshes
     // CAUTION: non-optimized code ahead
 
@@ -83,6 +84,7 @@ void create_line_artwork_v2( int target_num_meshes, float point_search_radius )
     // - search for existing mesh corners, in a agiven radius
     // - if not found, generate them
     // - add newly created mesh into list
+    std::vector<Mesh> v_meshes;
 
     int retry_count = 0;
 
@@ -172,92 +174,35 @@ void create_line_artwork_v2( int target_num_meshes, float point_search_radius )
 
     }
     std::cout<<" = Line artwork (v2) created with " << v_meshes.size() << " meshes = \ntook "<<retry_count<<" failed meshing attempts\n";
-    return;
+    return v_meshes;
 }
 
-void print_gcode()
-{   // prints gcode to stream
-
-    float z_clearance_level = 3.f;
-
-    std::cout<<"G21 ;metric values\n"
-             <<"G90 ;absolute positioning\n"
-//             <<"G28 X0 Y0 ;move/set to xy zero\n"
-//             <<"G28 Z0 ; move/set to Z zero\n"
-             <<"G01 Z"<<z_clearance_level<<" F400 ;move clearance amount up\n";
-
-    for( size_t m_ind = 0; m_ind < v_meshes.size(); m_ind++ )
-    { // for each mesh, m_ind
-        std::cout<<";== mesh "<<m_ind<<" ==\n";
-        for( size_t i_ind = 0; i_ind < v_meshes[m_ind].infill.size(); i_ind++ )
-        {   // for each infill line in mesh
-            Line l = v_meshes[m_ind].infill[i_ind];
-            std::cout<<";mesh_"<<m_ind<<" infill_"<<i_ind<<"\n"
-                     <<"G01 X"<<l.getEnd().getX()<<" Y"<<l.getEnd().getY()<<"\n"
-                     <<"G01 Z0\n"
-                     <<"G01 X"<<l.getStart().getX()<<" Y"<<l.getStart().getY()<<"\n"
-                     <<"G00 Z"<<z_clearance_level<<"\n";
-        }
-    }
-}
-
-void dLine( sf::Image& im, const Line& l, const float thickness )
-{   // draws the line on the image using CPU
-    float ppmm = pixels_per_mm;
-    Point p1 = l.getStart();
-    Point p2 = l.getEnd();
-    int im_h = im.getSize().y;
-    int im_w = im.getSize().x;
-    float x1 = p1.getX()*ppmm;
-    float x2 = p2.getX()*ppmm;
-    float y1 = p1.getY()*ppmm;
-    float y2 = p2.getY()*ppmm;
-    float l_len = l.getLen()*ppmm;
-    int border = 0.4*ppmm;
-
-    for( int x = std::min(x1, x2)-border ;
-         x < std::max(x1, x2)+border ;
-         x++ )
-    {   // line x span + border
-        for( int y = std::min(y1, y2)-border ;
-             y < std::max(y1, y2)+border ;
-             y++ )
-        {   // line y span + border
-            if( x < 0 || y < 0 || x >= im_w || y >= im_h ) continue;
-            if( std::abs( (x2-x1) * (y1-y) - (x1-x) * (y2-y1) ) / l_len < (thickness*ppmm/2.f) )
-                im.setPixel(x, y, sf::Color::Black );
-        }
-    }
-}
-
-void draw_to_image( sf::Image& im )
+std::vector<Mesh> create_line_artwork_v3( int target_num_meshes, float max_wiggle_amount )
 {
-    // frame drawing
-    Line fr1 = Line(Point(0,0), Point(work_area_x,0)).move(image_border,image_border);
-    Line fr2 = Line(Point(0,0), Point(0, work_area_y)).move(image_border,image_border);
-    Line fr3 = Line(Point(0,work_area_y), Point(work_area_x, work_area_y)).move(image_border,image_border);
-    Line fr4 = Line(Point(work_area_x,0), Point(work_area_x, work_area_y)).move(image_border,image_border);
-    dLine( im, fr1, 5.0f );
-    dLine( im, fr2, 5.0f );
-    dLine( im, fr3, 5.0f );
-    dLine( im, fr4, 5.0f );
+    std::vector<Mesh> v_meshes;
+    // Temp data storage
+    std::vector<Point> fixme;
 
-    for( Mesh mesh : v_meshes )
+    /// XXX XXX XXX
+
+    // find out num vertices for each axis
+    float area_per_mesh = work_area_x * work_area_y / (float)target_num_meshes;
+    int num_vert_x = (int)floor( work_area_x / area_per_mesh );
+    int num_vert_y = (int)floor( work_area_y / area_per_mesh );
+    float spacing_vertices_x = work_area_x / num_vert_x;
+    float spacing_vertices_y = work_area_y / num_vert_y;
+    for( float cx = spacing_vertices_x/2; cx < work_area_x; cx += spacing_vertices_x )
     {
-        // create a temporary mesh and move it, so that we have a border around our canvas
-        Mesh m = mesh;
-        m.move( image_border, image_border );
-
-        // mesh bounds
-        dLine( im, Line(m.m_p1, m.m_p2), 0.7f );
-        dLine( im, Line(m.m_p2, m.m_p3), 0.7f );
-        dLine( im, Line(m.m_p3, m.m_p1), 0.7f );
-
-        // infill lines
-        for( Line l: m.infill )
+        // TODO offset even/odd lines by spacing_vertices to avoid linear grid
+        for( float cy = spacing_vertices_y/2; cy < work_area_y; cy += spacing_vertices_y )
         {
-            dLine( im, l, 0.5f );
+            // add a vertice point
         }
     }
+
+
+    return v_meshes;
 }
+
+
 
