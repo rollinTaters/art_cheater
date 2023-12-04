@@ -4,6 +4,11 @@ latest_sim_img
 latest_sim_image.jpg
 line_sim_img.jpg
 
+# any created nc (gcode) files
+artwork_*
+*.gcode
+*.nc
+
 # also any jpg and png files
 *.jpg
 *.png

@@ -1,5 +1,6 @@
 #include "nc_generator.hpp"
 #include <iostream>
+#include <fstream>
 #include <string>
 #include <list>
 
@@ -16,19 +17,19 @@ float z_clearance_level = 3.f;
 float HPx = 0; // head position x
 float HPy = 0; // head position y
 
-void print_gcode( std::vector<Mesh>& v_meshes )
+
+std::ostream& generate_gcode( std::ostream& outstr, const std::vector<Mesh>& v_meshes )
 {   // prints gcode to stream
 
-    std::cout<< start_string;
-    std::cout<<"G01 Z"<<z_clearance_level<<" F400 ;move clearance amount up\n";
+    outstr<<"G01 Z"<<z_clearance_level<<" F400 ;move clearance amount up\n";
 
     for( size_t m_ind = 0; m_ind < v_meshes.size(); m_ind++ )
     { // for each mesh, m_ind
-        std::cout<<";== mesh "<<m_ind<<" ==\n";
+        outstr<<";== mesh "<<m_ind<<" ==\n";
         for( size_t i_ind = 0; i_ind < v_meshes[m_ind].infill.size(); i_ind++ )
         {   // for each infill line in mesh
             Line l = v_meshes[m_ind].infill[i_ind];
-            std::cout<<";mesh_"<<m_ind<<" infill_"<<i_ind<<"\n"
+            outstr<<";mesh_"<<m_ind<<" infill_"<<i_ind<<"\n"
                      <<"G01 X"<<l.getEnd().getX()<<" Y"<<l.getEnd().getY()<<"\n"
                      <<"G01 Z0\n"
                      <<"G01 X"<<l.getStart().getX()<<" Y"<<l.getStart().getY()<<"\n"
@@ -37,25 +38,22 @@ void print_gcode( std::vector<Mesh>& v_meshes )
             HPy = l.getStart().getY();
         }
     }
+    return outstr;
 }
 
-void print_gcode( std::vector<Line>& v_lines )
+std::ostream& generate_gcode( std::ostream& outstr, const std::vector<Line>& v_lines )
 {
-    float target_x;
-    float target_y;
-
-    std::cout<< start_string;
-    std::cout<<"G01 Z"<<z_clearance_level<<" F400 ;move clearance amount up\n";
+    outstr<<"G01 Z"<<z_clearance_level<<" F400 ;move clearance amount up\n";
 
     // we need to quickly add/remove lines from memory, convert it to list
     std::list<Line> leyn;
-    for( Line& l : v_lines )
+    for( const Line& l : v_lines )
     {
         leyn.emplace_back( l );
     }
 
     // find the closest line and draw it, then enter the loop
-    moveOnClosestLine( leyn, HPx, HPy, true );
+    moveOnClosestLine( outstr, leyn, HPx, HPy, true );
 
     while( !leyn.empty() )
     {
@@ -68,7 +66,7 @@ void print_gcode( std::vector<Line>& v_lines )
             Point e = it->getEnd();
             if( s.getX() == HPx && s.getY() == HPy )
             { // we are at start point of line
-                std::cout<< "G01 X"<< e.getX() << " Y" << e.getY() << "\n";
+                outstr<< "G01 X"<< e.getX() << " Y" << e.getY() << "\n";
                 HPx = e.getX();
                 HPy = e.getY();
                 it = leyn.erase(it);
@@ -76,7 +74,7 @@ void print_gcode( std::vector<Line>& v_lines )
             }
             else if( e.getX() == HPx && e.getY() == HPy )
             {
-                std::cout<< "G01 X"<< s.getX() << " Y" << s.getY() << "\n";
+                outstr<< "G01 X"<< s.getX() << " Y" << s.getY() << "\n";
                 HPx = s.getX();
                 HPy = s.getY();
                 it = leyn.erase(it);
@@ -86,15 +84,16 @@ void print_gcode( std::vector<Line>& v_lines )
         
         if( line_drawn ) continue;
         // we couldnt find a connected line, draw closest to you
-        moveOnClosestLine( leyn, HPx, HPy, true );
+        moveOnClosestLine( outstr, leyn, HPx, HPy, true );
     }
     // raise head after operation complete
-    std::cout<<"G01 Z"<<z_clearance_level<<" F400 ;move clearance amount up\n";
-    std::cout<<"; lines drawing complete\n";
+    outstr<<"G01 Z"<<z_clearance_level<<" F400 ;move clearance amount up\n";
+    outstr<<"; lines drawing complete\n";
 
+    return outstr;
 }
 
-void moveOnClosestLine( std::list<Line>& lines, float& HPx, float& HPy, bool keep_head_down_after_move )
+std::ostream& moveOnClosestLine( std::ostream& outstr, std::list<Line>& lines, float& HPx, float& HPy, bool keep_head_down_after_move )
 {
     Line closest_line;
     float closest_dist = 1e10;
@@ -118,9 +117,9 @@ void moveOnClosestLine( std::list<Line>& lines, float& HPx, float& HPy, bool kee
     }
 
     // raise head
-    std::cout<<"G01 Z"<<z_clearance_level<<" F400 ;move clearance amount up\n";
+    outstr<<"G01 Z"<<z_clearance_level<<" F400 ;move clearance amount up\n";
     // move to line start
-    std::cout<<"G01 X"<< closest_point.getX() <<" Y"<< closest_point.getY() << "\n";
+    outstr<<"G01 X"<< closest_point.getX() <<" Y"<< closest_point.getY() << "\n";
     // find the other end of the closest line
     if( closest_point == closest_line.getStart() )
     {
@@ -134,13 +133,14 @@ void moveOnClosestLine( std::list<Line>& lines, float& HPx, float& HPy, bool kee
     HPx = target_x;
     HPy = target_y;
     // head down
-    std::cout<<"G01 Z0\n";
+    outstr<<"G01 Z0\n";
     // draw line
-    std::cout<<"G01 X"<< target_x <<" Y"<< target_y <<"\n";
+    outstr<<"G01 X"<< target_x <<" Y"<< target_y <<"\n";
     // raise head if asked for
     if( !keep_head_down_after_move )
-        std::cout<< "G00 Z"<< z_clearance_level <<"\n";
+        outstr<< "G00 Z"<< z_clearance_level <<"\n";
     // remove line from list
     lines.remove( closest_line );
+    return outstr;
 }
 
